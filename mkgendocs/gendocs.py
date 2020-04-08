@@ -197,7 +197,7 @@ def generate(config_path):
 
         for class_name in classes:
             target_info = extract.get_class(class_name)
-            markdown_str = to_markdown(target_info)
+            markdown_str = to_markdown(target_info, markdown_template)
             markdown_docstrings.append(markdown_str)
 
             methods = extract.get_methods(class_name)
