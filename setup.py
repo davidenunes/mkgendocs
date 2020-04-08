@@ -77,11 +77,7 @@ setup(
     license='Apache 2.0',
     author='Davide Nunes',
     author_email='mail@davidenunes.com',
-    description='A Python package for automatically generating the documentation pages to document a given Python '
-                'package in markdown. mkgendocs allows users to keep all of their documentation directly within their '
-                'packages as pages are generated directly from the docstrings in the code. Contrary to other packages, '
-                'this does not execute code to access signatures and docstrings, instead, it uses python Abstract '
-                'Syntax Trees (AST) and the astor package to convert function or class signatures back to source code',
+    description='A Python package for automatically generating documentation from Google docstrings in markdown.',
     long_description=long_description,
     long_description_content_type="text/markdown",
     package_data={
