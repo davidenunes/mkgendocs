@@ -1,0 +1,70 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C Extensions
+*.so
+
+# swap files for vim 
+*.swp
+
+# Packaging / Distribution
+.Python
+env/
+build/
+develop-eggs/
+dist/
+eggs/
+.eggs/
+lib/
+lib64/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# PyInstaller
+#  Usually these files are written by a python script from a template
+#  before PyInstaller builds the exe, so as to inject date/other infos into it.
+*.manifest
+*.spec
+
+# Installer Logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Tests
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*,cover
+
+# PyBuilder
+target/
+# IPythonNotebook template
+## Temporary data
+.ipynb_checkpoints/
+
+#mkdocs
+docs/sources
+
+
+# IDE files
+.idea
+.vscode
+
+# org files like notes and todo lists
+*.org
+
+# scratch folder
+scratch
+/docs/sources/
+/tests/ckpts/
+
+/venv/
