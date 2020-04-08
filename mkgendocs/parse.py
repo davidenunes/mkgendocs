@@ -800,12 +800,19 @@ class Extract:
         else:
             return ''
 
-    def get_docstring(self):
+    def get_docstring(self, get_lineno=False):
         node = ast.parse(self.source)
         docstring = ast.get_docstring(node)
+        lineno = 0
         if docstring is None:
             docstring = ""
-        return docstring
+        else:
+            lineno = node.body[0].lineno
+
+        if get_lineno:
+            return docstring, lineno
+        else:
+            return docstring
 
     def get_class(self, class_name: str):
         """ get_class

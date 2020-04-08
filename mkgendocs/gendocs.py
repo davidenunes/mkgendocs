@@ -50,17 +50,6 @@ ${section['text']}
 """
 
 
-def get_module_docstring(filepath):
-    """Extract the module docstring.
-
-    Also finds the line at which the docstring ends.
-    """
-    extract = Extract(filepath)
-    docstring = extract.get_docstring()
-
-    return docstring
-
-
 def copy_examples(examples_dir, destination_dir):
     """Copy the examples directory in the documentation.
 
@@ -71,7 +60,9 @@ def copy_examples(examples_dir, destination_dir):
         if not file.endswith('.py'):
             continue
         module_path = os.path.join(examples_dir, file)
-        docstring = get_module_docstring(module_path)
+        extract = Extract(module_path)
+        docstring, lineno = extract.get_docstring(get_lineno=True)
+
         destination_file = os.path.join(destination_dir, file[:-2] + 'md')
         with open(destination_file, 'w+', encoding='utf-8') as f_out, \
                 open(os.path.join(examples_dir, file),
@@ -80,7 +71,7 @@ def copy_examples(examples_dir, destination_dir):
             f_out.write(docstring + '\n\n')
 
             # skip docstring
-            for _ in range(starting_line):
+            for _ in range(lineno):
                 next(f_in)
 
             f_out.write('```python\n')
@@ -96,15 +87,25 @@ def copy_examples(examples_dir, destination_dir):
 
 
 def to_markdown(target_info, template):
+    """ converts object data and docstring to markdown
+
+    Args:
+        target_info: object name, signature, and docstring
+        template: markdown template for docstring to be rendered in markdown
+
+    Returns:
+        markdown (str): a string with the object documentation rendered in markdown
+
+    """
     docstring = target_info['docstring']
-    parser = GoogleDocString(docstring)
+    docstring_parser = GoogleDocString(docstring)
     try:
-        parser.parse()
+        docstring_parser.parse()
     except SyntaxError as e:
         e2 = f"Error while processing docstrings for {target_info['class']}.{target_info['function']}"
         raise Exception(e2 + ":\n\t" + str(e)).with_traceback(e.__traceback__)
 
-    headers, data = parser.markdown()
+    headers, data = docstring_parser.markdown()
 
     # if docstring contains a signature, override the source
     if "signature" in data[0]:
@@ -136,11 +137,17 @@ def generate(config_path):
     config = yaml.full_load(open(config_path))
 
     sources_dir = config.get('sources_dir', 'docs/sources')
+    if not sources_dir:
+        sources_dir = "docs/sources"
     template_dir = config.get('templates_dir', None)
 
     print('Cleaning up existing sources directory.')
-    if os.path.exists(sources_dir):
+    if sources_dir and os.path.exists(sources_dir):
         shutil.rmtree(sources_dir)
+
+    # if there are no templates, sources are not created from the files copied
+    if not os.path.exists(sources_dir):
+        os.makedirs(sources_dir)
 
     print('Populating sources directory with templates.')
     if template_dir:
@@ -148,6 +155,7 @@ def generate(config_path):
             raise FileNotFoundError("No such directory: %s" % template_dir)
         shutil.copytree(template_dir, sources_dir)
 
+    readme = ""
     if os.path.exists('README.md'):
         readme = open('README.md').read()
 
@@ -164,10 +172,6 @@ def generate(config_path):
     if os.path.exists('examples'):
         copy_examples(os.path.join('examples'),
                       os.path.join(sources_dir, 'examples'))
-
-    # if there are no templates, sources are not created from the files copied
-    if not os.path.exists(sources_dir):
-        os.makedirs(sources_dir)
 
     with open(os.path.join(sources_dir, 'index.md'), 'w', encoding='utf-8') as f:
         f.write(index)
@@ -248,8 +252,12 @@ def generate(config_path):
             f.write(markdown)
 
 
-if __name__ == '__main__':
+def main():
     parser = argparse.ArgumentParser(description='Generate docs')
     parser.add_argument('-c', '--config', dest='config', help='path to config file', default="mkgendocs.yml")
     args = parser.parse_args()
     generate(args.config)
+
+
+if __name__ == '__main__':
+    main()

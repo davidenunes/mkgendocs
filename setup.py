@@ -80,6 +80,9 @@ setup(
     description='A Python package for automatically generating documentation from Google docstrings in markdown.',
     long_description=long_description,
     long_description_content_type="text/markdown",
+    entry_points={
+        'console_scripts': ['gendocs=mkgendocs.gendocs:main']
+    },
     package_data={
         "": ["LICENSE"],
     },
