@@ -4,10 +4,10 @@ Python source files by parsing **Google style docstring**. The markdown output m
 ideal to combine with [mkdocs](https://www.mkdocs.org/). 
 
 Contrary to other packages, this does not use the `inspect` package to access signatures 
-and docstrings. Instead, it uses python Abstract Syntax Trees (AST) to get this from the
+and docstrings. Instead, it makes use of python Abstract Syntax Trees (AST) to get this information from the
 source files without executing the code -through the `ast` 
  package. It also makes use of `astor` (AST observe/rewrite) to convert function or 
- class signatures back to source code strings.
+ class signatures from AST nodes back to source code strings.
  
 ## Installation
 Install mkgendocs from [PyPI](https://pypi.org/project/mkgendocs/)
