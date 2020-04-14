@@ -32,7 +32,6 @@ the module level docstrings are copied
 ````yaml
 sources_dir: docs/sources
 templates_dir: docs/templates
-docstring_template: docstring_template.md
 
 pages:
   - page: "train/model.md"
