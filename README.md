@@ -6,7 +6,7 @@ ideal to combine with [mkdocs](https://www.mkdocs.org/).
 Contrary to other packages, this does not use the `inspect` package to access signatures 
 and docstrings. Instead, it uses python Abstract Syntax Trees (AST) to get this from the
 source files without executing the code -through the `ast` 
- package. It also makes use of `astor (AST observe/rewrite) to convert function or 
+ package. It also makes use of `astor` (AST observe/rewrite) to convert function or 
  class signatures back to source code strings.
  
 ## Installation
