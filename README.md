@@ -3,11 +3,9 @@ A Python package for automatically generating documentation pages in markdown fo
 Python source files by parsing **Google style docstring**. The markdown output makes it
 ideal to combine with [mkdocs](https://www.mkdocs.org/). 
 
-Contrary to other packages, this does not use the `inspect` package to access signatures 
-and docstrings. Instead, it makes use of python Abstract Syntax Trees (AST) to get this information from the
-source files without executing the code -through the `ast` 
- package. It also makes use of `astor` (AST observe/rewrite) to convert function or 
- class signatures from AST nodes back to source code strings.
+Instead of executing the python code (using the `inspect` package to access signatures and docstrings), we extract information directly from the source files by parsing them into Abstract Syntax Trees (AST) using the `ast` package. 
+
+The `astor` (AST observe/rewrite) package is also used to convert function or class signatures from AST nodes back into source code strings.
  
 ![mkgendocs](mkgendocs.png)
 
