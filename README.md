@@ -24,7 +24,7 @@ gendocs --config mkgendocs.yml
 
 A sources directory is created with the documentation that was automatically generated.
 Any examples in a "examples" directory are automatically copied over to the documentation, 
-the module level docstrings are copied 
+the module level docstrings of any example source files are also copied and converted to markdown. 
 
 
 ### Configuration Example
