@@ -9,6 +9,8 @@ source files without executing the code -through the `ast`
  package. It also makes use of `astor` (AST observe/rewrite) to convert function or 
  class signatures from AST nodes back to source code strings.
  
+![mkgendocs](mkgendocs.png)
+
 ## Installation
 Install mkgendocs from [PyPI](https://pypi.org/project/mkgendocs/)
 
