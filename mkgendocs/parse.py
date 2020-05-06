@@ -58,7 +58,7 @@ class DocString(object):
                 settings that modify default behavior.
         """
         self.header = {}
-        self.docstring = docstring
+        self.docstring = docstring if docstring is not None else ""
         self.data = []
         self.signature = signature
 
@@ -256,7 +256,7 @@ class GoogleDocString(DocString):
         default_config = {}
         default_config['headers'] = \
             ('Args|Arguments|Returns|Yields|Raises|Note|' +
-             'Notes|Example|Examples|Attributes|Todo')
+             'Notes|Example|Examples|Attributes|Todo|References')
         default_config['blocks'] = 'note|seealso|abstract|summary|tldr|info|todo|tip|hint|important|success|check' \
                                    '|done|question|help|faq|warning|caution|attention|failure|fail|missing|danger' \
                                    '|error|bug|example|snippet|quote|cite '
@@ -295,9 +295,10 @@ class GoogleDocString(DocString):
                 This is block 2 and any should not contain any argument list.
             ```
         """
-
         # Get header
         lines = section.split('\n')
+
+        # escape mathjax
         # header = self._compile_header().findall(lines[0])
 
         # Skip the first line if it is a header
@@ -309,7 +310,6 @@ class GoogleDocString(DocString):
         args = []
         while self._state['linenum'] < len(lines):
             arg_data = self._parse_arglist(lines)
-
             if self._state['linenum'] == 0:
                 signature = self.get_signature(lines[0])
                 if signature:
@@ -317,9 +317,14 @@ class GoogleDocString(DocString):
 
             if not header and arg_data and self._config['warn_if_undefined_header'] and not \
                     (self._state['linenum'] == 0 and signature is not None):
-                warnings.warn(str(arg_data))
-                warnings.warn(str(self._state['linenum']))
-                warnings.warn("Undefined header: '%s'" % header + ' followed by an argument list.')
+                # if it's not a header it's just text
+                # warnings.warn(str(arg_data))
+                # warnings.warn(str(self._state['linenum']))
+                # warnings.warn("Undefined header: '%s'" % header + ' followed by an argument list.')
+                # basically who created this parser did't do that good of a job with the regex for args
+                # because anything with a delimiter is an arg
+                # TODO re-write this later with state in mind, only gather args if the previous was an header
+                pass
             if (arg_data and header) or (
                     arg_data and not header and not self._config['ignore_args_for_undefined_headers']):
                 args.append(arg_data)
@@ -331,6 +336,7 @@ class GoogleDocString(DocString):
         out['header'] = header
         out['text'] = '\n'.join(text)
         out['args'] = args
+
         return out
 
     def get_signature(self, line: str, name=None):
@@ -344,6 +350,7 @@ class GoogleDocString(DocString):
 
     def extract_sections(self):
         """
+        TODO when we have \n in args, it removes them from the result markdown
         Extracts sections from the docstring. Sections are identified by an
         additional header which is a recognized Keyword such as `Args` or
         `Returns`. All text within  a section is indented and the section ends
@@ -418,6 +425,7 @@ class GoogleDocString(DocString):
     def _compile_header(self):
         return re.compile(r'^\s*(%s)%s\s*' % (self._config['headers'],
                                               self._config['delimiter']))
+        # return re.compile(r'^\s*(%s)%s\s*\n' % (self._config['headers'],
 
     def _compile_block(self):
         return re.compile(r'^\s*(?:\!{3})|(?:\?{3}) (%s) (?:\".*\")?\s*' % self._config['blocks'])

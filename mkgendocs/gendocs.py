@@ -108,7 +108,7 @@ def to_markdown(target_info, template):
     headers, data = docstring_parser.markdown()
 
     # if docstring contains a signature, override the source
-    if "signature" in data[0]:
+    if data and "signature" in data[0]:
         signature = data[0]["signature"]
     else:
         signature = target_info['signature']
@@ -139,21 +139,21 @@ def generate(config_path):
     sources_dir = config.get('sources_dir', 'docs/sources')
     if not sources_dir:
         sources_dir = "docs/sources"
-    template_dir = config.get('templates_dir', None)
+    template_dir = config.get('templates', None)
 
     print('Cleaning up existing sources directory.')
     if sources_dir and os.path.exists(sources_dir):
         shutil.rmtree(sources_dir)
-
-    # if there are no templates, sources are not created from the files copied
-    if not os.path.exists(sources_dir):
-        os.makedirs(sources_dir)
 
     print('Populating sources directory with templates.')
     if template_dir:
         if not os.path.exists(template_dir):
             raise FileNotFoundError("No such directory: %s" % template_dir)
         shutil.copytree(template_dir, sources_dir)
+
+    # if there are no templates, sources are not created from the files copied
+    if not os.path.exists(sources_dir):
+        os.makedirs(sources_dir)
 
     readme = ""
     if os.path.exists('README.md'):
