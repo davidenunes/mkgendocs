@@ -1,11 +1,9 @@
 import os
 import shutil
-import six
 import yaml
 import pathlib
 from mkgendocs.parse import GoogleDocString, Extract
 import argparse
-import ast
 from mako.template import Template
 
 DOCSTRING_TEMPLATE = """
@@ -113,8 +111,6 @@ def to_markdown(target_info, template):
     else:
         signature = target_info['signature']
 
-    # print(class_info)
-
     # in mako ## is a comment
     markdown_str = template.render(header=target_info,
                                    signature=signature,
@@ -132,7 +128,7 @@ def generate(config_path):
         sources_dir: Where to put the markdown files.
     """
 
-    root = pathlib.Path().absolute()  # pathlib.Path(__file__).resolve().parents[1]
+    root = pathlib.Path().absolute()
     print("Loading configuration file")
     config = yaml.full_load(open(config_path))
 
@@ -191,38 +187,38 @@ def generate(config_path):
         extract = Extract(source)
 
         markdown_docstrings = []
-        classes = page_data.get('classes', [])
-        methods = page_data.get('methods', [])
-        functions = page_data.get('functions', [])
+        page_classes = page_data.get('classes', [])
+        page_methods = page_data.get('methods', [])
+        page_functions = page_data.get('functions', [])
 
-        for class_name in classes:
-            target_info = extract.get_class(class_name)
-            markdown_str = to_markdown(target_info, markdown_template)
-            markdown_docstrings.append(markdown_str)
+        def add_class_mkd(class_name, methods):
+            class_spec = extract.get_class(class_name)
+            mkd_str = to_markdown(class_spec, markdown_template)
+            markdown_docstrings.append(mkd_str)
 
-            methods = extract.get_methods(class_name)
-            if methods:
+            all_methods = extract.get_methods(class_name)
+            filtered_methods = [method for method in all_methods if method in methods]
+            if filtered_methods:
                 markdown_docstrings[-1] += "\n\n**Methods:**\n\n"
-                for method in methods:
+                for method in filtered_methods:
+                    print(f"Generating docs for {class_name}.{method}")
                     try:
-                        method_info = extract.get_method(class_name=class_name,
+                        method_spec = extract.get_method(class_name=class_name,
                                                          method_name=method)
-                        markdown_str = to_markdown(method_info, markdown_template)
-                        markdown_docstrings[-1] += markdown_str
+                        mkd_str = to_markdown(method_spec, markdown_template)
+                        markdown_docstrings[-1] += mkd_str
                     except NameError:
                         pass
 
-        # print(page_data.get('methods', []))
-        for class_dict in methods:
-            for c, ms in class_dict.items():
-                for m in ms:
-                    print(f"Generating docs for {c}.{m}")
-                    method_info = extract.get_method(class_name=c,
-                                                     method_name=m)
-                    markdown_str = to_markdown(method_info, markdown_template)
-                    markdown_docstrings.append(markdown_str)
+        for class_name in page_classes:
+            class_methods = extract.get_methods(class_name)
+            add_class_mkd(class_name, class_methods)
 
-        for fn in functions:
+        for class_dict in page_methods:
+            for class_name, class_methods in class_dict.items():
+                add_class_mkd(class_name, class_methods)
+
+        for fn in page_functions:
             print(f"Generating docs for {fn}")
             fn_info = extract.get_function(fn)
             markdown_str = to_markdown(fn_info, markdown_template)

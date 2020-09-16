@@ -8,8 +8,6 @@ import re
 import warnings
 import ast
 import astor
-import os
-
 
 class DocString(object):
     """
@@ -255,7 +253,7 @@ class GoogleDocString(DocString):
 
         default_config = {}
         default_config['headers'] = \
-            ('Args|Arguments|Returns|Yields|Raises|Note|' +
+            ('Args|Arguments|Returns|Yields|Raises|Note|Properties|Fields' +
              'Notes|Example|Examples|Attributes|Todo|References')
         default_config['blocks'] = 'note|seealso|abstract|summary|tldr|info|todo|tip|hint|important|success|check' \
                                    '|done|question|help|faq|warning|caution|attention|failure|fail|missing|danger' \
@@ -714,14 +712,20 @@ class Extract:
         cls = self._get_class(class_name)
         methods = []
         for function in cls.body:
-            # Not a method, skip
             if isinstance(function, ast.FunctionDef):
-                for decorator in function.decorator_list:
-                    if isinstance(decorator, ast.Name):
-                        if static and decorator.id == 'staticmethod':
-                            methods.append(function.name)
-                        if not static and decorator.id != 'static':
-                            methods.append(function.name)
+                if not function.decorator_list and \
+                        not function.name == "__init__" and \
+                        not function.name.startswith("_"):
+                    methods.append(function.name)
+                else:
+                    for decorator in function.decorator_list:
+                        if isinstance(decorator, ast.Name):
+                            if static and decorator.id == 'staticmethod':
+                                methods.append(function.name)
+                            if not static and decorator.id != 'static':
+                                # skip properties
+                                pass
+                                # methods.append(function.name)
         return methods
 
     def get_method(self, class_name, method_name):
@@ -838,7 +842,7 @@ class Extract:
         """
 
         class_def = self._get_class(class_name)
-        signature = f"{class_name}()"
+
         try:
             init_method = self._get_function(function_name="__init__", classdef=class_def)
             signature = Extract._get_signature(init_method)
@@ -847,6 +851,8 @@ class Extract:
         except AttributeError as e:
             raise e
 
+        if not signature:
+            signature = f"{class_name}()"
         docstring = ast.get_docstring(class_def)
         if docstring is None:
             docstring = ""
