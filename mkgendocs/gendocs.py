@@ -5,6 +5,10 @@ import pathlib
 from mkgendocs.parse import GoogleDocString, Extract
 import argparse
 from mako.template import Template
+import logging
+
+logging.basicConfig(level=logging.INFO,
+                    format=">%(message)s")
 
 DOCSTRING_TEMPLATE = """
 ## if we are processing a method function
@@ -129,7 +133,7 @@ def generate(config_path):
     """
 
     root = pathlib.Path().absolute()
-    print("Loading configuration file")
+    logging.info("Loading configuration file")
     config = yaml.full_load(open(config_path))
 
     sources_dir = config.get('sources_dir', 'docs/sources')
@@ -137,11 +141,11 @@ def generate(config_path):
         sources_dir = "docs/sources"
     template_dir = config.get('templates', None)
 
-    print('Cleaning up existing sources directory.')
+    logging.info('Cleaning up existing sources directory.')
     if sources_dir and os.path.exists(sources_dir):
         shutil.rmtree(sources_dir)
 
-    print('Populating sources directory with templates.')
+    logging.info('Populating sources directory with templates.')
     if template_dir:
         if not os.path.exists(template_dir):
             raise FileNotFoundError("No such directory: %s" % template_dir)
@@ -172,7 +176,7 @@ def generate(config_path):
     with open(os.path.join(sources_dir, 'index.md'), 'w', encoding='utf-8') as f:
         f.write(index)
 
-    print("Generating docs ...")
+    logging.info("Generating docs ...")
     docstring_template = DOCSTRING_TEMPLATE
     if "docstring_template" in config:
         try:
@@ -188,38 +192,64 @@ def generate(config_path):
 
         markdown_docstrings = []
         page_classes = page_data.get('classes', [])
-        page_methods = page_data.get('methods', [])
+        logging.debug(f"page classes {page_classes}")
+        # page_methods = page_data.get('methods', [])
         page_functions = page_data.get('functions', [])
 
-        def add_class_mkd(class_name, methods):
-            class_spec = extract.get_class(class_name)
+        def add_class_mkd(cls_name, methods):
+            class_spec = extract.get_class(cls_name)
             mkd_str = to_markdown(class_spec, markdown_template)
             markdown_docstrings.append(mkd_str)
 
-            all_methods = extract.get_methods(class_name)
-            filtered_methods = [method for method in all_methods if method in methods]
-            if filtered_methods:
+            #all_methods = extract.get_methods(cls_name)
+            #filtered_methods = [method for method in #all_methods if method in methods]
+            if methods:
                 markdown_docstrings[-1] += "\n\n**Methods:**\n\n"
-                for method in filtered_methods:
-                    print(f"Generating docs for {class_name}.{method}")
+                for method in methods:
+                    logging.info(f"Generating docs for {cls_name}.{method}")
                     try:
-                        method_spec = extract.get_method(class_name=class_name,
+                        method_spec = extract.get_method(class_name=cls_name,
                                                          method_name=method)
                         mkd_str = to_markdown(method_spec, markdown_template)
                         markdown_docstrings[-1] += mkd_str
                     except NameError:
                         pass
 
-        for class_name in page_classes:
-            class_methods = extract.get_methods(class_name)
-            add_class_mkd(class_name, class_methods)
+        for class_entry in page_classes:
+            if isinstance(class_entry, dict):
+                class_name = list(class_entry.keys())[0]
+                all_methods = set(extract.get_methods(class_name))
+                method_names = class_entry.get(class_name)
+                excluded = set()
+                included = set()
+                for method_name in method_names:
+                    if method_name.lstrip().startswith("!"):
+                        method_name = method_name[method_name.find("!") + 1:]
+                        if len(method_name) > 0 and method_name in all_methods:
+                            excluded.add(method_name)
+                        elif method_name not in all_methods:
+                            raise ValueError(f"{method_name} not a method of {class_name}")
+                    else:
+                        included.add(method_name)
+                if excluded:
+                    excluded_str = "\n".join(excluded)
+                    logging.info(f"\tExcluded: {excluded_str}")
 
-        for class_dict in page_methods:
-            for class_name, class_methods in class_dict.items():
-                add_class_mkd(class_name, class_methods)
+                if len(excluded) > 0 and len(included) == 0:
+                    included.update()
+                logging.info(class_name)
+                add_class_mkd(class_name, included)
+            else:
+                # add all methods to documentation
+                class_methods = extract.get_methods(class_entry)
+                add_class_mkd(class_entry, class_methods)
+
+        # for class_dict in page_methods:
+        #     for class_name, class_methods in class_dict.items():
+        #         add_class_mkd(class_name, class_methods)
 
         for fn in page_functions:
-            print(f"Generating docs for {fn}")
+            logging.info(f"Generating docs for {fn}")
             fn_info = extract.get_function(fn)
             markdown_str = to_markdown(fn_info, markdown_template)
             markdown_docstrings.append(markdown_str)
@@ -238,9 +268,10 @@ def generate(config_path):
                                    ' but missing {{autogenerated}}'
                                    ' tag.')
             markdown = page_template.replace('{{autogenerated}}', markdown)
-            print('...inserting autogenerated content into template:', path)
+            logging.info(f"Inserting autogenerated content into template:{path}")
         else:
-            print('...creating new page with autogenerated content:', path)
+            logging.info(f"Creating new page with autogenerated content:{path}")
+
         subdir = os.path.dirname(path)
         if not os.path.exists(subdir):
             os.makedirs(subdir)
