@@ -125,6 +125,36 @@ def to_markdown(target_info, template):
     return markdown_str
 
 
+def build_index(pages):
+    root = pathlib.Path().absolute()
+
+    # source->class->page
+    # source->fn->page
+
+    cls_index = dict()
+    fn_index = dict()
+    for page_data in pages:
+        is_index = page_data.get("index", False)
+        if not is_index:
+            source = page_data['source']
+            page = page_data["page"]
+            clss = set(page_data.get('classes', []))
+            fns = set(page_data.get('functions', []))
+
+            if source not in cls_index:
+                cls_index[source] = dict()
+            if source not in fn_index:
+                fn_index[source] = dict()
+
+            for cls in clss:
+                cls_index[source][cls] = page
+
+            for fn in fns:
+                fn_index[source][fn] = page
+
+    return cls_index, fn_index
+
+
 def generate(config_path):
     """Generates the markdown files for the documentation.
 
@@ -186,74 +216,95 @@ def generate(config_path):
     markdown_template = Template(text=docstring_template)
 
     pages = config.get("pages", dict())
+    # check which classes and functions are being documented
+    # TODO link index to individual pages based on headers when we have multiple classes in the same page (local links)
+    cls_index, fn_index = build_index(pages)
     for page_data in pages:
-        source = os.path.join(root, page_data['source'])
-        extract = Extract(source)
+        is_index = page_data.get("index", False)
+        # build index page
+        if is_index:
+            source = os.path.join(root, page_data['source'])
+            extract = Extract(source)
+            all_cls = extract.get_classes()
+            all_fn = extract.get_functions()
+            if len(cls_index[source]) > 0:
+                all_cls = [cls_name for cls_name in all_cls if cls_name in cls_index[source]]
+            if len(fn_index[source]) > 0:
+                all_fn = [fn_name for fn_name in all_fn if fn_name in fn_index[source]]
 
-        markdown_docstrings = []
-        page_classes = page_data.get('classes', [])
-        logging.debug(f"page classes {page_classes}")
-        # page_methods = page_data.get('methods', [])
-        page_functions = page_data.get('functions', [])
+            markdown = ["## Classes"] + [f"class **{cls_name}**" for cls_name in all_cls] + ["\n\n"]
+            markdown += ["## Functions"] + [f"**{cls_name}**" for cls_name in all_cls] + ["\n\n"]
 
-        def add_class_mkd(cls_name, methods):
-            class_spec = extract.get_class(cls_name)
-            mkd_str = to_markdown(class_spec, markdown_template)
-            markdown_docstrings.append(mkd_str)
+            markdown = "\n".join(markdown)
+        # build class or function page
+        else:
+            source = os.path.join(root, page_data['source'])
+            extract = Extract(source)
 
-            if methods:
-                markdown_docstrings[-1] += "\n\n**Methods:**\n\n"
-                for method in methods:
-                    logging.info(f"Generating docs for {cls_name}.{method}")
-                    try:
-                        method_spec = extract.get_method(class_name=cls_name,
-                                                         method_name=method)
-                        mkd_str = to_markdown(method_spec, markdown_template)
-                        markdown_docstrings[-1] += mkd_str
-                    except NameError:
-                        pass
+            markdown_docstrings = []
+            page_classes = page_data.get('classes', [])
+            logging.debug(f"page classes {page_classes}")
+            # page_methods = page_data.get('methods', [])
+            page_functions = page_data.get('functions', [])
 
-        for class_entry in page_classes:
-            if isinstance(class_entry, dict):
-                class_name = list(class_entry.keys())[0]
-                all_methods = set(extract.get_methods(class_name))
-                method_names = class_entry.get(class_name)
-                excluded = set()
-                included = set()
-                for method_name in method_names:
-                    if method_name.lstrip().startswith("!"):
-                        method_name = method_name[method_name.find("!") + 1:]
-                        if len(method_name) > 0 and method_name in all_methods:
-                            excluded.add(method_name)
-                        elif method_name not in all_methods:
-                            raise ValueError(f"{method_name} not a method of {class_name}")
-                    else:
-                        included.add(method_name)
-                if excluded:
-                    excluded_str = "\n".join(excluded)
-                    logging.info(f"\tExcluded: {excluded_str}")
+            def add_class_mkd(cls_name, methods):
+                class_spec = extract.get_class(cls_name)
+                mkd_str = to_markdown(class_spec, markdown_template)
+                markdown_docstrings.append(mkd_str)
 
-                if len(excluded) > 0 and len(included) == 0:
-                    included.update()
-                logging.info(class_name)
-                add_class_mkd(class_name, included)
-            else:
-                # add all methods to documentation
-                class_methods = extract.get_methods(class_entry)
-                add_class_mkd(class_entry, class_methods)
+                if methods:
+                    markdown_docstrings[-1] += "\n\n**Methods:**\n\n"
+                    for method in methods:
+                        logging.info(f"Generating docs for {cls_name}.{method}")
+                        try:
+                            method_spec = extract.get_method(class_name=cls_name,
+                                                             method_name=method)
+                            mkd_str = to_markdown(method_spec, markdown_template)
+                            markdown_docstrings[-1] += mkd_str
+                        except NameError:
+                            pass
 
-        # for class_dict in page_methods:
-        #     for class_name, class_methods in class_dict.items():
-        #         add_class_mkd(class_name, class_methods)
+            for class_entry in page_classes:
+                if isinstance(class_entry, dict):
+                    class_name = list(class_entry.keys())[0]
+                    all_methods = set(extract.get_methods(class_name))
+                    method_names = class_entry.get(class_name)
+                    excluded = set()
+                    included = set()
+                    for method_name in method_names:
+                        if method_name.lstrip().startswith("!"):
+                            method_name = method_name[method_name.find("!") + 1:]
+                            if len(method_name) > 0 and method_name in all_methods:
+                                excluded.add(method_name)
+                            elif method_name not in all_methods:
+                                raise ValueError(f"{method_name} not a method of {class_name}")
+                        else:
+                            included.add(method_name)
+                    if excluded:
+                        excluded_str = "\n".join(excluded)
+                        logging.info(f"\tExcluded: {excluded_str}")
 
-        for fn in page_functions:
-            logging.info(f"Generating docs for {fn}")
-            fn_info = extract.get_function(fn)
-            markdown_str = to_markdown(fn_info, markdown_template)
-            markdown_docstrings.append(markdown_str)
-        #    for method name in class_name:
+                    if len(excluded) > 0 and len(included) == 0:
+                        included.update()
+                    logging.info(class_name)
+                    add_class_mkd(class_name, included)
+                else:
+                    # add all methods to documentation
+                    class_methods = extract.get_methods(class_entry)
+                    add_class_mkd(class_entry, class_methods)
 
-        markdown = '\n----\n\n'.join(markdown_docstrings)
+            # for class_dict in page_methods:
+            #     for class_name, class_methods in class_dict.items():
+            #         add_class_mkd(class_name, class_methods)
+
+            for fn in page_functions:
+                logging.info(f"Generating docs for {fn}")
+                fn_info = extract.get_function(fn)
+                markdown_str = to_markdown(fn_info, markdown_template)
+                markdown_docstrings.append(markdown_str)
+            #    for method name in class_name:
+
+            markdown = '\n----\n\n'.join(markdown_docstrings)
 
         # Either insert content into existing template or create new page
         page_name = page_data['page']
