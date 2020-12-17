@@ -138,8 +138,11 @@ def build_index(pages):
         if not is_index:
             source = page_data['source']
             page = page_data["page"]
-            clss = set(page_data.get('classes', []))
-            fns = set(page_data.get('functions', []))
+            if "classes" in page_data:
+                classes = [list(cls)[0] if isinstance(cls,dict) else cls for cls in page_data["classes"]]
+                classes = set(classes)
+            clss = classes
+            fns = set(list(page_data.get('functions', [])))
 
             if source not in cls_index:
                 cls_index[source] = dict()
@@ -227,9 +230,9 @@ def generate(config_path):
             extract = Extract(source)
             all_cls = extract.get_classes()
             all_fn = extract.get_functions()
-            if len(cls_index[source]) > 0:
+            if source in cls_index and len(cls_index[source]) > 0:
                 all_cls = [cls_name for cls_name in all_cls if cls_name in cls_index[source]]
-            if len(fn_index[source]) > 0:
+            if source in fn_index and len(fn_index[source]) > 0:
                 all_fn = [fn_name for fn_name in all_fn if fn_name in fn_index[source]]
 
             markdown = ["## Classes"] + [f"class **{cls_name}**" for cls_name in all_cls] + ["\n\n"]
