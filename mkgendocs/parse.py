@@ -9,6 +9,7 @@ import warnings
 import ast
 import astor
 
+
 class DocString(object):
     """
     This is the base class for parsing docstrings.
@@ -867,7 +868,29 @@ class Extract:
                 "ast": class_def
             }
 
+    def get_classes(self):
+        """ get_classes
+
+        returns a list of classes from the current module
+
+
+        Returns:
+            classes (list): a list of class names
+
         """
-        for dark theme syntax highlight
-        https: // github.com / mkdocs / mkdocs / wiki / MkDocs - Recipes  # dark-theme-syntax-higlighting
+        module = ast.parse(self.source)
+
+        return [node.name for node in module.body if isinstance(node, ast.ClassDef)]
+
+    def get_functions(self):
+        """ get_functions
+
+        returns a list of functions from the current module
+
+        Returns:
+            functions (list): a list of function names
+
         """
+        module = ast.parse(self.source)
+
+        return [node.name for node in module.body if isinstance(node, ast.FunctionDef)]

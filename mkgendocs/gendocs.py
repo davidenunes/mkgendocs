@@ -201,8 +201,6 @@ def generate(config_path):
             mkd_str = to_markdown(class_spec, markdown_template)
             markdown_docstrings.append(mkd_str)
 
-            #all_methods = extract.get_methods(cls_name)
-            #filtered_methods = [method for method in #all_methods if method in methods]
             if methods:
                 markdown_docstrings[-1] += "\n\n**Methods:**\n\n"
                 for method in methods:
