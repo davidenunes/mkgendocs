@@ -139,7 +139,7 @@ def build_index(pages):
             source = page_data['source']
             page = page_data["page"]
             if "classes" in page_data:
-                classes = [list(cls)[0] if isinstance(cls,dict) else cls for cls in page_data["classes"]]
+                classes = [list(cls)[0] if isinstance(cls, dict) else cls for cls in page_data["classes"]]
                 classes = set(classes)
             clss = classes
             fns = set(list(page_data.get('functions', [])))
@@ -221,22 +221,56 @@ def generate(config_path):
     pages = config.get("pages", dict())
     # check which classes and functions are being documented
     # TODO link index to individual pages based on headers when we have multiple classes in the same page (local links)
+    logging.info("Building ref index...")
     cls_index, fn_index = build_index(pages)
     for page_data in pages:
+        page = page_data['page']
         is_index = page_data.get("index", False)
         # build index page
         if is_index:
             source = os.path.join(root, page_data['source'])
+            cls_specified = page_data.get("classes", [])
+            fns_specified = page_data.get("functions", [])
+
+            # logging.info(fn_index[source])
             extract = Extract(source)
             all_cls = extract.get_classes()
-            all_fn = extract.get_functions()
+            all_fn = [fn for fn in extract.get_functions() if not fn.startswith("_")]
+
+            # filter by specified
+            for cls in cls_specified:
+                if cls not in all_cls:
+                    msg = f"{cls} specified in index page \"{page}\" could not be found in \"{source}\""
+                    logging.error(msg)
+                    raise ValueError(msg)
+            for fn in fns_specified:
+                if fn not in all_fn:
+                    msg = f"{fn} specified in index page \"{page}\" could not be found in \"{source}\""
+                    logging.error(msg)
+                    raise ValueError(msg)
+
+            if cls_specified:
+                all_cls = cls_specified
+            if fns_specified:
+                all_fn = fns_specified
+
+            source = page_data['source']
             if source in cls_index and len(cls_index[source]) > 0:
                 all_cls = [cls_name for cls_name in all_cls if cls_name in cls_index[source]]
             if source in fn_index and len(fn_index[source]) > 0:
                 all_fn = [fn_name for fn_name in all_fn if fn_name in fn_index[source]]
 
-            markdown = ["## Classes"] + [f"class **{cls_name}**" for cls_name in all_cls] + ["\n\n"]
-            markdown += ["## Functions"] + [f"**{cls_name}**" for cls_name in all_cls] + ["\n\n"]
+            markdown = ["## Classes\n"]
+            for cls_name in all_cls:
+                url = cls_index[source][cls_name].removesuffix(".md")
+                # common = os.path.commonpath([cls_index[source][cls_name],page])
+                # TODO if len common > 0, if not then we have to use the target page instead
+                #rel_url = cls_index[source][cls_name].removeprefix(common)
+                # rel_url = rel_url.removesuffix(".md")
+                #markdown += [f"[class {cls_name}](/{common+rel_url}/)\n"]
+                markdown += [f"[class {cls_name}](/{url}/)\n"]
+            markdown += ["\n\n"]
+            markdown += ["## Functions"] + [f"[{fn_name}]()\n" for fn_name in all_fn] + ["\n\n"]
 
             markdown = "\n".join(markdown)
         # build class or function page
