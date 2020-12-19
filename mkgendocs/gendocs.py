@@ -18,12 +18,17 @@ ${h3} .${header['function']}
     %else:
 ${h3} ${header['function']}
     %endif
+%if not source is UNDEFINED:
+[source](${source})
+%endif
 ```python
 .${signature}
 ```
 %elif header['class']:
 ${h2} ${header['class']}
-
+%if not source is UNDEFINED:
+[source](${source})
+%endif
 ```python 
 ${signature}
 ```
@@ -88,7 +93,7 @@ def copy_examples(examples_dir, destination_dir):
             f_out.write('```')
 
 
-def to_markdown(target_info, template):
+def to_markdown(target_info, template, rel_path, config):
     """ converts object data and docstring to markdown
 
     Args:
@@ -115,8 +120,13 @@ def to_markdown(target_info, template):
     else:
         signature = target_info['signature']
 
+    lineno = target_info.get('lineno', None)
+    lineno = f"#L{lineno}" if lineno else ""
+    repo = os.path.join(config['repo'], "blob", config.get('version', 'master'), rel_path, lineno)
+
     # in mako ## is a comment
     markdown_str = template.render(header=target_info,
+                                   source=repo,
                                    signature=signature,
                                    sections=data,
                                    headers=headers,
@@ -167,9 +177,12 @@ def generate(config_path):
 
     root = pathlib.Path().absolute()
     logging.info("Loading configuration file")
-    config = yaml.full_load(open(config_path))
-
+    try:
+        config = yaml.full_load(open(config_path))
+    except yaml.parser.ParserError as e:
+        raise Exception(f"invalid configuration {config_path} \n") from e
     sources_dir = config.get('sources_dir', 'docs/sources')
+    repo = config.get('repo', None)
     if not sources_dir:
         sources_dir = "docs/sources"
     template_dir = config.get('templates', None)
@@ -220,7 +233,6 @@ def generate(config_path):
 
     pages = config.get("pages", dict())
     # check which classes and functions are being documented
-    # TODO link index to individual pages based on headers when we have multiple classes in the same page (local links)
     logging.info("Building ref index...")
     cls_index, fn_index = build_index(pages)
     for page_data in pages:
@@ -260,17 +272,24 @@ def generate(config_path):
             if source in fn_index and len(fn_index[source]) > 0:
                 all_fn = [fn_name for fn_name in all_fn if fn_name in fn_index[source]]
 
+            # TODO this can be refactored into code that's a bit more clean
             markdown = ["## Classes\n"]
             for cls_name in all_cls:
-                url = cls_index[source][cls_name].removesuffix(".md")
-                # common = os.path.commonpath([cls_index[source][cls_name],page])
-                # TODO if len common > 0, if not then we have to use the target page instead
-                #rel_url = cls_index[source][cls_name].removeprefix(common)
-                # rel_url = rel_url.removesuffix(".md")
-                #markdown += [f"[class {cls_name}](/{common+rel_url}/)\n"]
-                markdown += [f"[class {cls_name}](/{url}/)\n"]
+                if cls_name in cls_index[source]:
+                    url = cls_index[source][cls_name].removesuffix(".md")
+                    markdown += [f"[class {cls_name}](/{url}/)\n"]
+                else:
+                    markdown += [f"class {cls_name}\n"]
             markdown += ["\n\n"]
-            markdown += ["## Functions"] + [f"[{fn_name}]()\n" for fn_name in all_fn] + ["\n\n"]
+            markdown += ["## Functions"]
+
+            for fn_name in all_fn:
+                if fn_name in fn_index[source]:
+                    url = fn_index[source][fn_name].removesuffix(".md")
+                    markdown += [f"[{fn_name}](/{url}/)\n"]
+                else:
+                    markdown += [f"{fn_name}\n"]
+            ["\n\n"]
 
             markdown = "\n".join(markdown)
         # build class or function page
@@ -286,7 +305,8 @@ def generate(config_path):
 
             def add_class_mkd(cls_name, methods):
                 class_spec = extract.get_class(cls_name)
-                mkd_str = to_markdown(class_spec, markdown_template)
+
+                mkd_str = to_markdown(class_spec, markdown_template, page_data['source'], config)
                 markdown_docstrings.append(mkd_str)
 
                 if methods:
@@ -296,7 +316,7 @@ def generate(config_path):
                         try:
                             method_spec = extract.get_method(class_name=cls_name,
                                                              method_name=method)
-                            mkd_str = to_markdown(method_spec, markdown_template)
+                            mkd_str = to_markdown(method_spec, markdown_template, page_data['source'], config)
                             markdown_docstrings[-1] += mkd_str
                         except NameError:
                             pass
@@ -337,7 +357,7 @@ def generate(config_path):
             for fn in page_functions:
                 logging.info(f"Generating docs for {fn}")
                 fn_info = extract.get_function(fn)
-                markdown_str = to_markdown(fn_info, markdown_template)
+                markdown_str = to_markdown(fn_info, markdown_template, page_data['source'], config)
                 markdown_docstrings.append(markdown_str)
             #    for method name in class_name:
 
@@ -362,6 +382,7 @@ def generate(config_path):
         if not os.path.exists(subdir):
             os.makedirs(subdir)
         with open(path, 'w', encoding='utf-8') as f:
+            markdown = "#\n\n"+markdown
             f.write(markdown)
 
 
