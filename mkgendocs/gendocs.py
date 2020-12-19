@@ -99,6 +99,8 @@ def to_markdown(target_info, template, rel_path, config):
     Args:
         target_info: object name, signature, and docstring
         template: markdown template for docstring to be rendered in markdown
+        rel_path: relative path to current class sources
+        config: mkgendocs config dict
 
     Returns:
         markdown (str): a string with the object documentation rendered in markdown
@@ -122,27 +124,33 @@ def to_markdown(target_info, template, rel_path, config):
 
     lineno = target_info.get('lineno', None)
     lineno = f"#L{lineno}" if lineno else ""
-    repo = os.path.join(config['repo'], "blob", config.get('version', 'master'), rel_path, lineno)
 
-    # in mako ## is a comment
-    markdown_str = template.render(header=target_info,
-                                   source=repo,
-                                   signature=signature,
-                                   sections=data,
-                                   headers=headers,
-                                   h2='##', h3='###')
+    if "repo" in config:
+        repo = os.path.join(config['repo'], "blob", config.get('version', 'master'), rel_path, lineno)
+
+        # in mako ## is a comment
+        markdown_str = template.render(header=target_info,
+                                       source=repo,
+                                       signature=signature,
+                                       sections=data,
+                                       headers=headers,
+                                       h2='##', h3='###')
+    else:
+        markdown_str = template.render(header=target_info,
+                                       signature=signature,
+                                       sections=data,
+                                       headers=headers,
+                                       h2='##', h3='###')
 
     return markdown_str
 
 
 def build_index(pages):
-    root = pathlib.Path().absolute()
-
     # source->class->page
     # source->fn->page
 
-    cls_index = dict()
-    fn_index = dict()
+    class_index = dict()
+    function_index = dict()
     for page_data in pages:
         is_index = page_data.get("index", False)
         if not is_index:
@@ -151,21 +159,29 @@ def build_index(pages):
             if "classes" in page_data:
                 classes = [list(cls)[0] if isinstance(cls, dict) else cls for cls in page_data["classes"]]
                 classes = set(classes)
-            clss = classes
-            fns = set(list(page_data.get('functions', [])))
+            else:
+                classes = set()
+            classes = sorted(classes)
 
-            if source not in cls_index:
-                cls_index[source] = dict()
-            if source not in fn_index:
-                fn_index[source] = dict()
+            if "functions" in page_data:
+                functions = [list(fn)[0] if isinstance(fn, dict) else fn for fn in page_data["functions"]]
+                functions = set(functions)
+            else:
+                functions = set()
+            functions = sorted(functions)
 
-            for cls in clss:
-                cls_index[source][cls] = page
+            if source not in class_index:
+                class_index[source] = dict()
+            if source not in function_index:
+                function_index[source] = dict()
 
-            for fn in fns:
-                fn_index[source][fn] = page
+            for cls in classes:
+                class_index[source][cls] = page
 
-    return cls_index, fn_index
+            for fn in functions:
+                function_index[source][fn] = page
+
+    return class_index, function_index
 
 
 def generate(config_path):
@@ -275,8 +291,11 @@ def generate(config_path):
             # TODO this can be refactored into code that's a bit more clean
             markdown = ["## Classes\n"]
             for cls_name in all_cls:
+                print(cls_name)
                 if cls_name in cls_index[source]:
                     url = cls_index[source][cls_name].removesuffix(".md")
+                    # print(f"{url}")
+                    url += f"#{cls_name}"
                     markdown += [f"[class {cls_name}](/{url}/)\n"]
                 else:
                     markdown += [f"class {cls_name}\n"]
@@ -350,16 +369,11 @@ def generate(config_path):
                     class_methods = extract.get_methods(class_entry)
                     add_class_mkd(class_entry, class_methods)
 
-            # for class_dict in page_methods:
-            #     for class_name, class_methods in class_dict.items():
-            #         add_class_mkd(class_name, class_methods)
-
             for fn in page_functions:
                 logging.info(f"Generating docs for {fn}")
                 fn_info = extract.get_function(fn)
                 markdown_str = to_markdown(fn_info, markdown_template, page_data['source'], config)
                 markdown_docstrings.append(markdown_str)
-            #    for method name in class_name:
 
             markdown = '\n----\n\n'.join(markdown_docstrings)
 
@@ -376,13 +390,13 @@ def generate(config_path):
             markdown = page_template.replace('{{autogenerated}}', markdown)
             logging.info(f"Inserting autogenerated content into template:{path}")
         else:
+            markdown = "#\n\n" + markdown
             logging.info(f"Creating new page with autogenerated content:{path}")
 
         subdir = os.path.dirname(path)
         if not os.path.exists(subdir):
             os.makedirs(subdir)
         with open(path, 'w', encoding='utf-8') as f:
-            markdown = "#\n\n"+markdown
             f.write(markdown)
 
 
