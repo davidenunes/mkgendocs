@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "mkgendocs"
-version = "0.7"
+version = "0.8"
 repository = "https://github.com/davidenunes/mkgendocs"
 homepage = "https://github.com/davidenunes/mkgendocs"
 readme = 'README.md'
