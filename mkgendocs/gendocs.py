@@ -291,10 +291,11 @@ def generate(config_path):
             # TODO this can be refactored into code that's a bit more clean
             markdown = ["## Classes\n"]
             for cls_name in all_cls:
-                print(cls_name)
                 if cls_name in cls_index[source]:
-                    url = cls_index[source][cls_name].removesuffix(".md")
-                    # print(f"{url}")
+                    url = cls_index[source][cls_name]
+                    suffix = ".md"
+                    if suffix and url.endswith(suffix):
+                        url = url[:-len(suffix)]
                     url += f"#{cls_name}"
                     markdown += [f"[class {cls_name}](/{url}/)\n"]
                 else:
