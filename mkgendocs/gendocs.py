@@ -294,7 +294,7 @@ def generate(config_path):
                 if cls_name in cls_index[source]:
                     url = cls_index[source][cls_name]
                     suffix = ".md"
-                    if suffix and url.endswith(suffix):
+                    if url.endswith(suffix):
                         url = url[:-len(suffix)]
                     url += f"#{cls_name}"
                     markdown += [f"[class {cls_name}](/{url}/)\n"]
@@ -305,11 +305,15 @@ def generate(config_path):
 
             for fn_name in all_fn:
                 if fn_name in fn_index[source]:
-                    url = fn_index[source][fn_name].removesuffix(".md")
+                    url = fn_index[source][fn_name]
+                    suffix = ".md"
+                    if url.endswith(suffix):
+                        url = url[:-len(suffix)]
+                    url += f"#{fn_name}"
                     markdown += [f"[{fn_name}](/{url}/)\n"]
                 else:
                     markdown += [f"{fn_name}\n"]
-            ["\n\n"]
+            markdown += ["\n\n"]
 
             markdown = "\n".join(markdown)
         # build class or function page
