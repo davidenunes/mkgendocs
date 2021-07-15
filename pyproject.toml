@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "mkgendocs"
-version = "0.8.2"
+version = "0.9.0"
 repository = "https://github.com/davidenunes/mkgendocs"
 homepage = "https://github.com/davidenunes/mkgendocs"
 readme = 'README.md'
@@ -37,3 +37,7 @@ six = '*'
 pyyaml = '*'
 astor = '*'
 mako = '*'
+
+[tool.poetry.dev-dependencies]
+pytest = "*"
+pytest-cov = "*"

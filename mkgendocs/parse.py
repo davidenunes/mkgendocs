@@ -609,7 +609,11 @@ def mark_code_blocks(txt, keyword='>>>', split='\n', tag="```", lang='python'):
 class Extract:
     def __init__(self, path):
         self.path = path
-        self.source = open(path).read()
+
+        if isinstance(path, str):
+            self.source = open(path).read()
+        else:
+            self.source = path.read()
 
     def get_function(self, function_name: str):
         """get_function
@@ -849,10 +853,10 @@ class Extract:
             signature = Extract._get_signature(init_method)
             if signature:
                 signature = f"{class_name}(\n{Extract._format_signature(signature)}\n)"
-        except AttributeError as e:
-            raise e
+        except Exception:
+            signature = None
 
-        if not signature:
+        if signature is None:
             signature = f"{class_name}()"
         docstring = ast.get_docstring(class_def)
         if docstring is None:
