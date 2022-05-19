@@ -125,9 +125,14 @@ def to_markdown(target_info, template, rel_path, config):
     lineno = target_info.get('lineno', None)
     lineno = f"#L{lineno}" if lineno else ""
 
-    if "repo" in config:
+    repo = None
+
+    if "custom_repo" in config:
+        repo = os.path.join(config['custom_repo'], rel_path, lineno)
+    elif "repo" in config:
         repo = os.path.join(config['repo'], "blob", config.get('version', 'master'), rel_path, lineno)
 
+    if repo is not None:
         # in mako ## is a comment
         markdown_str = template.render(header=target_info,
                                        source=repo,
