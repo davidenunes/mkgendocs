@@ -671,9 +671,9 @@ class Extract:
         else:
             body = ast.parse(self.source).body
 
-        for method_def in body:
-            if isinstance(method_def, ast.FunctionDef) and method_def.name == function_name:
-                return method_def
+        for func_def in body:
+            if isinstance(func_def, (ast.FunctionDef, ast.AsyncFunctionDef)) and func_def.name == function_name:
+                return func_def
 
         if classdef:
             raise Exception("method %s not found in class %s" % (function_name, classdef.name))

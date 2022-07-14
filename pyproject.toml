@@ -19,6 +19,7 @@ classifiers = [
     "Programming Language :: Python :: 3.7",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
     'Programming Language :: Python :: 3 :: Only',
     "License :: OSI Approved :: Apache Software License",
     "Intended Audience :: Developers",
@@ -32,12 +33,12 @@ classifiers = [
 gendocs = 'mkgendocs.gendocs:main'
 
 [tool.poetry.dependencies]
-python = "^3.5"
+python = ">=3.7,<4.0"
 six = '*'
 pyyaml = '*'
 astor = '*'
 mako = '*'
 
 [tool.poetry.dev-dependencies]
-pytest = "*"
-pytest-cov = "*"
+pytest = "7.1.2"
+
