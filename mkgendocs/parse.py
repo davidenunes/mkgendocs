@@ -717,7 +717,7 @@ class Extract:
         cls = self._get_class(class_name)
         methods = []
         for function in cls.body:
-            if isinstance(function, ast.FunctionDef):
+            if isinstance(function, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 if not function.decorator_list and \
                         not function.name == "__init__" and \
                         not function.name.startswith("_"):
@@ -725,12 +725,11 @@ class Extract:
                 else:
                     for decorator in function.decorator_list:
                         if isinstance(decorator, ast.Name):
-                            if static and decorator.id == 'staticmethod':
-                                methods.append(function.name)
-                            if not static and decorator.id != 'static':
-                                # skip properties
+                            if static and (decorator.id != 'staticmethod' or decorator.id != 'classmethod'):
                                 pass
-                                # methods.append(function.name)
+                            else:
+                                methods.append(function.name)
+
         return methods
 
     def get_method(self, class_name, method_name):
