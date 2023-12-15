@@ -6,6 +6,7 @@ from mkgendocs.parse import GoogleDocString, Extract
 import argparse
 from mako.template import Template
 import logging
+from typing import Tuple, Dict, List, Union
 
 logging.basicConfig(level=logging.INFO,
                     format=">%(message)s")
@@ -57,10 +58,14 @@ ${section['text']}
 """
 
 
-def copy_examples(examples_dir, destination_dir):
+def copy_examples(examples_dir: str, destination_dir: str) -> None:
     """Copy the examples directory in the documentation.
 
     Prettify files by extracting the docstrings written in Markdown.
+
+    Args:
+        examples_dir (str): The directory where the examples are stored.
+        destination_dir (str): The directory where the examples will be copied to.
     """
     pathlib.Path(destination_dir).mkdir(exist_ok=True)
     for file in os.listdir(examples_dir):
@@ -93,18 +98,17 @@ def copy_examples(examples_dir, destination_dir):
             f_out.write('```')
 
 
-def to_markdown(target_info, template, rel_path, config):
-    """ converts object data and docstring to markdown
+def to_markdown(target_info: Dict, template: Template, rel_path: str, config: Dict) -> str:
+    """Converts object data and docstring to markdown
 
     Args:
-        target_info: object name, signature, and docstring
-        template: markdown template for docstring to be rendered in markdown
-        rel_path: relative path to current class sources
-        config: mkgendocs config dict
+        target_info (Dict): Object name, signature, and docstring
+        template (Template): Markdown template for docstring to be rendered in markdown
+        rel_path (str): Relative path to current class sources
+        config (Dict): mkgendocs config dict
 
     Returns:
-        markdown (str): a string with the object documentation rendered in markdown
-
+        str: A string with the object documentation rendered in markdown
     """
     docstring = target_info['docstring']
     docstring_parser = GoogleDocString(docstring)
@@ -130,7 +134,8 @@ def to_markdown(target_info, template, rel_path, config):
     if "custom_repo" in config:
         repo = os.path.join(config['custom_repo'], rel_path, lineno)
     elif "repo" in config:
-        repo = os.path.join(config['repo'], "blob", config.get('version', 'master'), rel_path, lineno)
+        sub_dir = config.get("sub_dir", "")
+        repo = os.path.join(config['repo'], "blob", config.get('version', 'master'), sub_dir, rel_path, lineno)
 
     if repo is not None:
         # in mako ## is a comment
@@ -189,11 +194,16 @@ def build_index(pages):
     return class_index, function_index
 
 
-def generate(config_path):
-    """Generates the markdown files for the documentation.
+def generate(config_path: str) -> None:
+    """
+    Generates the markdown files for the documentation.
 
-    # Arguments
-        sources_dir: Where to put the markdown files.
+    Args:
+        config_path (str): The path to the configuration file.
+
+    Raises:
+        Exception: If the configuration file is invalid.
+        FileNotFoundError: If the template directory does not exist.
     """
 
     root = pathlib.Path().absolute()

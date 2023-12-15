@@ -44,10 +44,11 @@ class DocString(object):
             documentation if they are part of this list. Defaults to `['self']`.
     """
 
-    def __init__(self, docstring, signature=None, config=None):
+    def __init__(self, docstring: str, signature: dict = None, config: dict = None):
         """
         Initialize a new parser.
         Args:
+            docstring (str): Docstring to be parsed.
             signature(dict, optional): A dict containing arguments and return
                 annotations. See the function `parse_signature' to construct
                 this dict from a PEP484 annotated signature. When this argument
@@ -95,7 +96,7 @@ class DocString(object):
         }
         self._re = {}
 
-    def parse(self):
+    def parse(self) -> list:
         """
         This method should be overridden to parse docstring sections
         """
@@ -128,9 +129,12 @@ class DocString(object):
         """
         pass
 
-    def __json__(self):
+    def __json__(self) -> str:
         """
         Output docstring as JSON data.
+
+        Returns:
+            str: The docstring data in JSON format.
         """
         import json
 
@@ -141,26 +145,32 @@ class DocString(object):
 
     def __str__(self):
         """
-        This method should be overloaded to specify how to output to plain-text.
+        Output the original docstring.
+
+        Returns:
+            str: The original docstring.
         """
         return self.docstring
 
-    def markdown(self):
+    def markdown(self) -> tuple:
         """
         Output data relevant data needed for markdown rendering.
         Args:
             filename (str, optional) : select template to use for markdown
                 rendering.
+        Returns:
+            tuple: Headers and data for markdown rendering.
         """
         data = self.data
         headers = self._config['headers'].split('|')
         return headers, data
 
-    def check_args(self, section):
+    def check_args(self, section: dict):
         """
-        Check if all args have been documented in the docstring and if, they
-        have annotations, annotations matches the ones in the function
-        signature. This method only works when `signature` have been specified.
+        Check if all args have been documented in the docstring and if they have annotations, annotations matches the ones in the function signature. 
+
+        Args:
+            section (dict): The section of the docstring to check.
         """
         if not self.signature or not self._config['check_args']:
             return
@@ -192,11 +202,15 @@ class DocString(object):
                 if arg not in self.signature['args']:
                     warnings.warn(' Found argument `%s` in docstring that does' \
                                   ' not exist in function signature.' % arg, UserWarning)
-
-    def override_annotations(self, section, parsed_args, headers):
+    
+    def override_annotations(self, section: dict, parsed_args: dict, headers: list):
         """
-        Override argument annotations in docstrings with annotations found in
-        `args`.
+        Override argument annotations in docstrings with annotations found in `args`.
+
+        Args:
+            section (dict): The section of the docstring to override.
+            parsed_args (dict): The parsed arguments.
+            headers (list): The headers.
         """
         if not parsed_args or not self._config['override_annotations']:
             return
@@ -212,10 +226,12 @@ class DocString(object):
                 out['signature'] = parsed_args[arg['field']]
             section['args'].append(out)
 
-    def mark_code_blocks(self, section):
+    def mark_code_blocks(self, section: dict):
         """
-        Enclose code blocks in formatting tags if option `config['code']` is
-        not None.
+        Enclose code blocks in formatting tags if option `config['code']` is not None.
+
+        Args:
+            section (dict): The section of the docstring to mark.
         """
         if not self._config['code']:
             return
